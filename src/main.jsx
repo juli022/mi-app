@@ -6,6 +6,10 @@ import Products from './pages/Products';
 import Contact from './pages/Contact';
 import Navbar from './components/Navbar';
 import './index.css';
+import DetalleProducto from './pages/DetalleProducto'
+import MisReservas from './pages/MisReservas'
+
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -15,6 +19,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/" element={<Home />} />
         <Route path="/productos" element={<Products />} />
         <Route path="/contacto" element={<Contact />} />
+      <Route path="/productos/:id" element={<DetalleProducto />} />
+       <Route path="/mis-reservas" element={<MisReservas />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

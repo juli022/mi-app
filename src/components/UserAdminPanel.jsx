@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import CategoryAdmin from './CategoryAdmin'  // Esta línea debe estar fuera de la función, al inicio
 import FeatureAdmin from './FeatureAdmin'
+import CrearProductoForm from './CrearProductoForm'
+import ReservasAdmin from './ReservasAdmin'
 
 function UserAdminPanel() {
   const [usuarios, setUsuarios] = useState([])
@@ -17,6 +19,9 @@ function UserAdminPanel() {
     setUsuarios(actualizados)
     localStorage.setItem('usuarios', JSON.stringify(actualizados))
   }
+
+  const usuarioActual = JSON.parse(localStorage.getItem('usuarioActual'))
+  console.log('Usuario actual:', usuarioActual)
 
   return (
     <div style={{ marginTop: '2rem' }}>
@@ -46,9 +51,15 @@ function UserAdminPanel() {
           ))}
         </tbody>
       </table>
-      <CategoryAdmin />
-<FeatureAdmin />
 
+      {usuarioActual?.rol === 'admin' && (
+        <>
+          <CategoryAdmin />
+          <FeatureAdmin />
+          <CrearProductoForm />
+          <ReservasAdmin />
+        </>
+      )}
     </div>
   )
 }
