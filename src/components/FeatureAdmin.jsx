@@ -1,38 +1,46 @@
 import { useState, useEffect } from 'react'
+import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore'
+import { db } from '../firebase'
 
 function FeatureAdmin() {
   const [caracteristicas, setCaracteristicas] = useState([])
   const [nueva, setNueva] = useState({ nombre: '', icono: '' })
 
-  // Cargar las características guardadas al iniciar
   useEffect(() => {
-    const guardadas = JSON.parse(localStorage.getItem('caracteristicas')) || []
-    setCaracteristicas(guardadas)
+    const cargarCaracteristicas = async () => {
+      const snapshot = await getDocs(collection(db, 'caracteristicas'))
+      const cars = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setCaracteristicas(cars)
+    }
+    cargarCaracteristicas()
   }, [])
 
-  // Actualizar el formulario
   const handleChange = (e) => {
     setNueva({ ...nueva, [e.target.name]: e.target.value })
   }
 
-  // Agregar nueva característica
-  const agregar = (e) => {
+  const agregar = async (e) => {
     e.preventDefault()
     if (!nueva.nombre.trim() || !nueva.icono.trim()) {
       alert('Completá todos los campos.')
       return
     }
-    const actualizadas = [...caracteristicas, nueva]
-    setCaracteristicas(actualizadas)
-    localStorage.setItem('caracteristicas', JSON.stringify(actualizadas))
-    setNueva({ nombre: '', icono: '' })
+    try {
+      const docRef = await addDoc(collection(db, 'caracteristicas'), nueva)
+      setCaracteristicas([...caracteristicas, { id: docRef.id, ...nueva }])
+      setNueva({ nombre: '', icono: '' })
+    } catch (error) {
+      alert('Error al agregar la característica.')
+    }
   }
 
-  // Eliminar una característica
-  const eliminar = (index) => {
-    const actualizadas = caracteristicas.filter((_, i) => i !== index)
-    setCaracteristicas(actualizadas)
-    localStorage.setItem('caracteristicas', JSON.stringify(actualizadas))
+  const eliminar = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'caracteristicas', id))
+      setCaracteristicas(caracteristicas.filter(c => c.id !== id))
+    } catch (error) {
+      alert('Error al eliminar la característica.')
+    }
   }
 
   return (
@@ -59,11 +67,11 @@ function FeatureAdmin() {
       </form>
 
       <ul style={{ marginTop: '1rem', listStyle: 'none', padding: 0 }}>
-        {caracteristicas.map((c, i) => (
-          <li key={i} style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {caracteristicas.map((c) => (
+          <li key={c.id} style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ fontSize: '1.2rem' }}>{c.icono}</span>
             <span>{c.nombre}</span>
-            <button onClick={() => eliminar(i)} style={{ marginLeft: 'auto' }}>
+            <button onClick={() => eliminar(c.id)} style={{ marginLeft: 'auto' }}>
               Eliminar
             </button>
           </li>

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
+import { collection, getDocs, addDoc } from 'firebase/firestore'
 import { db } from '../firebase'
-import { collection, addDoc, getDocs } from 'firebase/firestore'
 
 function CategoryAdmin() {
   const [categorias, setCategorias] = useState([])
@@ -10,11 +10,12 @@ function CategoryAdmin() {
     imagen: ''
   })
 
+  // Cargar categorías desde Firestore
   useEffect(() => {
     const cargarCategorias = async () => {
       const snapshot = await getDocs(collection(db, 'categorias'))
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      setCategorias(docs)
+      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setCategorias(cats)
     }
     cargarCategorias()
   }, [])
@@ -28,7 +29,6 @@ function CategoryAdmin() {
 
   const agregarCategoria = async (e) => {
     e.preventDefault()
-
     if (
       !nuevaCategoria.titulo.trim() ||
       !nuevaCategoria.descripcion.trim() ||
@@ -37,11 +37,13 @@ function CategoryAdmin() {
       alert('Completá todos los campos.')
       return
     }
-
-    await addDoc(collection(db, 'categorias'), nuevaCategoria)
-
-    setCategorias([...categorias, nuevaCategoria])
-    setNuevaCategoria({ titulo: '', descripcion: '', imagen: '' })
+    try {
+      const docRef = await addDoc(collection(db, 'categorias'), nuevaCategoria)
+      setCategorias([...categorias, { id: docRef.id, ...nuevaCategoria }])
+      setNuevaCategoria({ titulo: '', descripcion: '', imagen: '' })
+    } catch (error) {
+      alert('Error al agregar la categoría.')
+    }
   }
 
   return (
@@ -73,8 +75,8 @@ function CategoryAdmin() {
       </form>
 
       <ul style={{ marginTop: '1rem' }}>
-        {categorias.map((cat, i) => (
-          <li key={i} style={{ marginBottom: '1rem' }}>
+        {categorias.map((cat) => (
+          <li key={cat.id} style={{ marginBottom: '1rem' }}>
             <strong>{cat.titulo}</strong> - {cat.descripcion}
             <br />
             <img src={cat.imagen} alt={cat.titulo} width={150} />

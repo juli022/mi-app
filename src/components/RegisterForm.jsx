@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 import Alerta from './Alerta'
 
-function RegisterForm() {
+function RegisterForm({ onRegister }) {
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [email, setEmail] = useState('')
@@ -9,103 +11,89 @@ function RegisterForm() {
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setMensaje('')
 
-    if (!nombre || !apellido || !email || !password) {
+    if (!nombre.trim() || !apellido.trim() || !email.trim() || !password.trim()) {
       setMensaje('Completá todos los campos.')
       setError(true)
       return
     }
 
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
-    const yaExiste = usuarios.some((u) => u.email === email)
+    try {
+      // Verificar si el email ya existe
+      const q = query(collection(db, 'usuarios'), where('email', '==', email))
+      const querySnapshot = await getDocs(q)
 
-    if (yaExiste) {
-      setMensaje('Este email ya está registrado.')
+      if (!querySnapshot.empty) {
+        setMensaje('Este email ya está registrado.')
+        setError(true)
+        return
+      }
+
+      // Crear nuevo usuario en Firestore
+      const nuevoUsuario = {
+        nombre,
+        apellido,
+        email,
+        password,
+        rol: 'usuario',
+      }
+
+      await addDoc(collection(db, 'usuarios'), nuevoUsuario)
+
+      localStorage.setItem('usuarioActual', JSON.stringify(nuevoUsuario))
+      setMensaje('¡Registro exitoso! Ahora estás logueada como usuaria.')
+      setError(false)
+
+      // Limpiar campos
+      setNombre('')
+      setApellido('')
+      setEmail('')
+      setPassword('')
+
+      if (onRegister) onRegister(nuevoUsuario)
+
+    } catch (error) {
+      setMensaje('Error al conectar con la base de datos.')
       setError(true)
-      return
     }
-
-    const nuevoUsuario = {
-      nombre,
-      apellido,
-      email,
-      password,
-      rol: 'usuario'
-    }
-
-    usuarios.push(nuevoUsuario)
-    localStorage.setItem('usuarios', JSON.stringify(usuarios))
-    localStorage.setItem('usuarioActual', JSON.stringify(nuevoUsuario))
-    setMensaje('¡Registro exitoso! Ahora estás logueada como usuaria.')
-    setError(false)
-
-    // Limpiar campos
-    setNombre('')
-    setApellido('')
-    setEmail('')
-    setPassword('')
   }
 
   return (
-    <div style={{
-      maxWidth: 400,
-      margin: '2rem auto',
-      padding: '2rem',
-      backgroundColor: '#2a2a2a',
-      borderRadius: '10px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-    }}>
-      <h2 style={{ textAlign: 'center' }}>Formulario de Registro</h2>
+    <form onSubmit={handleSubmit}>
+      <h2>Formulario de Registro</h2>
+      <input
+        type="text"
+        placeholder="Nombre"
+        value={nombre}
+        onChange={e => setNombre(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Apellido"
+        value={apellido}
+        onChange={e => setApellido(e.target.value)}
+      />
+      <input
+        type="email"
+        placeholder="Correo electrónico"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+      />
+      <input
+        type="password"
+        placeholder="Contraseña"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+      />
+      <button type="submit">Registrarse</button>
 
       {mensaje && (
-        <Alerta
-          tipo={error ? 'error' : 'exito'}
-          mensaje={mensaje}
-          onClose={() => setMensaje('')}
-        />
+        <Alerta tipo={error ? 'error' : 'exito'} mensaje={mensaje} onClose={() => setMensaje('')} />
       )}
-
-      <form onSubmit={handleSubmit}>
-        <label>Nombre</label>
-        <input
-          type="text"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          placeholder="Tu nombre"
-        />
-
-        <label>Apellido</label>
-        <input
-          type="text"
-          value={apellido}
-          onChange={(e) => setApellido(e.target.value)}
-          placeholder="Tu apellido"
-        />
-
-        <label>Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Correo electrónico"
-        />
-
-        <label>Contraseña</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Contraseña"
-        />
-
-        <button type="submit" style={{ width: '100%', marginTop: '1rem' }}>
-          Registrarse
-        </button>
-      </form>
-    </div>
+    </form>
   )
 }
 

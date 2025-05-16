@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore'
+import { db } from '../firebase'  // asegurate que esté bien la ruta
 import Alerta from '../components/Alerta'
 
 function DetalleProducto() {
@@ -25,7 +27,7 @@ function DetalleProducto() {
     if (rawUser) setUsuario(JSON.parse(rawUser))
   }, [id, navigate])
 
-  const handleReserva = (e) => {
+  const handleReserva = async (e) => {
     e.preventDefault()
     setMensaje('')
     setError(false)
@@ -35,46 +37,54 @@ function DetalleProducto() {
       setError(true)
       return
     }
-
     if (!fechaInicio || !fechaFin) {
       setMensaje('Por favor seleccioná fecha de inicio y fin.')
       setError(true)
       return
     }
-
     if (fechaFin < fechaInicio) {
       setMensaje('La fecha de fin no puede ser anterior a la de inicio.')
       setError(true)
       return
     }
 
-    const reservas = JSON.parse(localStorage.getItem('reservas')) || []
-    const conflicto = reservas.some(r =>
-      r.productoId === id &&
-      !(fechaFin < r.fechaInicio || fechaInicio > r.fechaFin)
-    )
+    try {
+      // Query reservas en Firestore que tengan mismo producto y fechas conflictivas
+      const reservasRef = collection(db, 'reservas')
+      const q = query(reservasRef, where('productoId', '==', id))
+      const querySnapshot = await getDocs(q)
 
-    if (conflicto) {
-      setMensaje('Este producto ya está reservado en las fechas seleccionadas.')
+      const conflicto = querySnapshot.docs.some(doc => {
+        const r = doc.data()
+        return !(fechaFin < r.fechaInicio || fechaInicio > r.fechaFin)
+      })
+
+      if (conflicto) {
+        setMensaje('Este producto ya está reservado en las fechas seleccionadas.')
+        setError(true)
+        return
+      }
+
+      // Agregar reserva a Firestore
+      await addDoc(reservasRef, {
+        productoId: id,
+        usuarioEmail: usuario.email,
+        fechaInicio,
+        fechaFin,
+        estado: 'pendiente',
+        creadoEn: new Date()
+      })
+
+      setMensaje('¡Reserva realizada con éxito!')
+      setError(false)
+      setFechaInicio('')
+      setFechaFin('')
+
+    } catch (err) {
+      setMensaje('Error al guardar la reserva. Intentá de nuevo.')
       setError(true)
-      return
+      console.error(err)
     }
-
-    const nuevaReserva = {
-      id: Date.now(),
-      productoId: id,
-      usuarioEmail: usuario.email,
-      fechaInicio,
-      fechaFin,
-      estado: 'pendiente'
-    }
-
-    reservas.push(nuevaReserva)
-    localStorage.setItem('reservas', JSON.stringify(reservas))
-    setMensaje('¡Reserva realizada con éxito!')
-    setError(false)
-    setFechaInicio('')
-    setFechaFin('')
   }
 
   if (!producto) return <p style={{ color: 'white' }}>Cargando...</p>

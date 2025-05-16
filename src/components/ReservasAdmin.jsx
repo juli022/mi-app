@@ -1,55 +1,46 @@
 import { useEffect, useState } from 'react'
+import { collection, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore'
+import { db } from '../firebase'
 
 function ReservasAdmin() {
   const [reservas, setReservas] = useState([])
   const [productos, setProductos] = useState([])
   const [usuarios, setUsuarios] = useState([])
-  
-  // Filtros
-  const [filtroEstado, setFiltroEstado] = useState('')
-  const [filtroUsuario, setFiltroUsuario] = useState('')
-
-  // Mensaje de feedback
-  const [mensaje, setMensaje] = useState('')
-  const [tipoMensaje, setTipoMensaje] = useState('') // 'exito' o 'error'
 
   useEffect(() => {
-    const reservasGuardadas = JSON.parse(localStorage.getItem('reservas')) || []
-    const productosGuardados = JSON.parse(localStorage.getItem('productos')) || []
-    const usuariosGuardados = JSON.parse(localStorage.getItem('usuarios')) || []
+    const fetchDatos = async () => {
+      const reservasSnapshot = await getDocs(collection(db, 'reservas'))
+      const productosSnapshot = await getDocs(collection(db, 'productos'))
+      const usuariosSnapshot = await getDocs(collection(db, 'usuarios'))
 
-    setReservas(reservasGuardadas)
-    setProductos(productosGuardados)
-    setUsuarios(usuariosGuardados)
+      setReservas(reservasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      setProductos(productosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      setUsuarios(usuariosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    }
+    fetchDatos()
   }, [])
 
-  // Función para mostrar mensaje con autocierre
-  const mostrarMensaje = (msg, tipo = 'exito') => {
-    setMensaje(msg)
-    setTipoMensaje(tipo)
-    setTimeout(() => {
-      setMensaje('')
-    }, 3000)
+  const cambiarEstado = async (id, nuevoEstado) => {
+    try {
+      const reservaDoc = doc(db, 'reservas', id)
+      await updateDoc(reservaDoc, { estado: nuevoEstado })
+      setReservas(reservas.map(r => (r.id === id ? { ...r, estado: nuevoEstado } : r)))
+    } catch {
+      alert('Error al actualizar estado.')
+    }
   }
 
-  const cambiarEstado = (id, nuevoEstado) => {
-    const actualizadas = reservas.map(r =>
-      r.id === id ? { ...r, estado: nuevoEstado } : r
-    )
-    setReservas(actualizadas)
-    localStorage.setItem('reservas', JSON.stringify(actualizadas))
-    mostrarMensaje(`Reserva ${nuevoEstado} con éxito!`)
-  }
-
-  const eliminarReserva = (id) => {
-    const filtradas = reservas.filter(r => r.id !== id)
-    setReservas(filtradas)
-    localStorage.setItem('reservas', JSON.stringify(filtradas))
-    mostrarMensaje('Reserva eliminada con éxito!')
+  const eliminarReserva = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'reservas', id))
+      setReservas(reservas.filter(r => r.id !== id))
+    } catch {
+      alert('Error al eliminar reserva.')
+    }
   }
 
   const nombreProducto = (productoId) => {
-    const p = productos[productoId]
+    const p = productos.find(p => p.id === productoId)
     return p ? p.titulo : 'Producto eliminado'
   }
 
@@ -58,61 +49,12 @@ function ReservasAdmin() {
     return u ? `${u.nombre} ${u.apellido}` : 'Usuario eliminado'
   }
 
-  // Aplicamos filtros
-  const reservasFiltradas = reservas.filter(r => {
-    const cumpleEstado = filtroEstado ? r.estado === filtroEstado : true
-    const cumpleUsuario = filtroUsuario
-      ? nombreUsuario(r.usuarioEmail).toLowerCase().includes(filtroUsuario.toLowerCase())
-      : true
-    return cumpleEstado && cumpleUsuario
-  })
-
   return (
     <div style={{ padding: '2rem', color: 'white', minHeight: '100vh', backgroundColor: '#1e1e1e' }}>
       <h2>Gestión de Reservas</h2>
 
-      {/* FILTROS */}
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <select
-          value={filtroEstado}
-          onChange={e => setFiltroEstado(e.target.value)}
-          style={{ padding: '0.5rem', borderRadius: '5px', border: '1px solid #444', background: '#2a2a2a', color: 'white' }}
-        >
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="confirmada">Confirmada</option>
-          <option value="cancelada">Cancelada</option>
-        </select>
-
-        <input
-          type="text"
-          placeholder="Buscar por usuario..."
-          value={filtroUsuario}
-          onChange={e => setFiltroUsuario(e.target.value)}
-          style={{ padding: '0.5rem', borderRadius: '5px', border: '1px solid #444', background: '#2a2a2a', color: 'white', flexGrow: 1 }}
-        />
-      </div>
-
-      {/* MENSAJE */}
-      {mensaje && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '5px',
-            backgroundColor: tipoMensaje === 'exito' ? '#38b000' : '#e63946',
-            color: 'white',
-            fontWeight: 'bold',
-            maxWidth: '400px'
-          }}
-        >
-          {mensaje}
-        </div>
-      )}
-
-      {/* TABLA */}
-      {reservasFiltradas.length === 0 ? (
-        <p>No hay reservas cargadas o que coincidan con los filtros.</p>
+      {reservas.length === 0 ? (
+        <p>No hay reservas cargadas.</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', color: 'white' }}>
           <thead>
@@ -126,13 +68,13 @@ function ReservasAdmin() {
             </tr>
           </thead>
           <tbody>
-            {reservasFiltradas.map(r => (
+            {reservas.map(r => (
               <tr key={r.id} style={{ borderBottom: '1px solid #555' }}>
                 <td>{nombreProducto(r.productoId)}</td>
                 <td>{nombreUsuario(r.usuarioEmail)}</td>
                 <td>{r.fechaInicio}</td>
                 <td>{r.fechaFin}</td>
-                <td style={{ textTransform: 'capitalize' }}>{r.estado}</td>
+                <td>{r.estado}</td>
                 <td>
                   {r.estado !== 'confirmada' && (
                     <button onClick={() => cambiarEstado(r.id, 'confirmada')} style={{ marginRight: '0.5rem' }}>

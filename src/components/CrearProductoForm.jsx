@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { collection, getDocs, addDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 
 function CrearProductoForm() {
   const [categorias, setCategorias] = useState([])
@@ -11,21 +13,22 @@ function CrearProductoForm() {
     imagen: '',
   })
 
-  // Cargar categorías y características desde localStorage
   useEffect(() => {
-    const cats = JSON.parse(localStorage.getItem('categorias')) || []
-    const cars = JSON.parse(localStorage.getItem('caracteristicas')) || []
-    setCategorias(cats)
-    setCaracteristicas(cars)
+    const cargarDatos = async () => {
+      const catsSnap = await getDocs(collection(db, 'categorias'))
+      const carsSnap = await getDocs(collection(db, 'caracteristicas'))
+
+      setCategorias(catsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      setCaracteristicas(carsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    }
+    cargarDatos()
   }, [])
 
-  // Manejar inputs
   const handleChange = (e) => {
     const { name, value } = e.target
     setProducto({ ...producto, [name]: value })
   }
 
-  // Manejar checkbox de características
   const handleCheckbox = (e) => {
     const { value, checked } = e.target
     if (checked) {
@@ -36,25 +39,24 @@ function CrearProductoForm() {
     } else {
       setProducto({
         ...producto,
-        caracteristicas: producto.caracteristicas.filter((c) => c !== value),
+        caracteristicas: producto.caracteristicas.filter(c => c !== value),
       })
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!producto.titulo || !producto.categoria) {
       alert('Completá título y categoría')
       return
     }
-    // Guardar producto en localStorage
-    const productosGuardados = JSON.parse(localStorage.getItem('productos')) || []
-    localStorage.setItem(
-      'productos',
-      JSON.stringify([...productosGuardados, producto])
-    )
-    alert('Producto guardado!')
-    setProducto({ titulo: '', categoria: '', caracteristicas: [], imagen: '' })
+    try {
+      await addDoc(collection(db, 'productos'), producto)
+      alert('Producto guardado!')
+      setProducto({ titulo: '', categoria: '', caracteristicas: [], imagen: '' })
+    } catch (error) {
+      alert('Error al guardar el producto.')
+    }
   }
 
   return (
@@ -77,18 +79,16 @@ function CrearProductoForm() {
           required
         >
           <option value="">Seleccioná una categoría</option>
-          {categorias.map((cat, i) => (
-            <option key={i} value={cat.nombre}>
-              {cat.nombre}
-            </option>
+          {categorias.map((cat) => (
+            <option key={cat.id} value={cat.titulo}>{cat.titulo}</option>
           ))}
         </select>
 
         <div>
           <label>Características:</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {caracteristicas.map((car, i) => (
-              <label key={i} style={{ cursor: 'pointer' }}>
+            {caracteristicas.map((car) => (
+              <label key={car.id} style={{ cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   value={car.nombre}

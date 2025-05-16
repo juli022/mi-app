@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '../firebase'
+import Alerta from './Alerta'
 
 function LoginForm({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -6,7 +9,7 @@ function LoginForm({ onLogin }) {
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setMensaje('')
 
@@ -16,20 +19,22 @@ function LoginForm({ onLogin }) {
       return
     }
 
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
+    try {
+      const q = query(collection(db, 'usuarios'), where('email', '==', email), where('password', '==', password))
+      const querySnapshot = await getDocs(q)
 
-    // Buscar usuario ignorando mayúsculas y espacios en email
-    const usuario = usuarios.find(
-      u => u.email.trim().toLowerCase() === email.trim().toLowerCase() && u.password === password
-    )
-
-    if (usuario) {
-      localStorage.setItem('usuarioActual', JSON.stringify(usuario))
-      setMensaje('¡Inicio de sesión exitoso!')
-      setError(false)
-      onLogin(usuario)
-    } else {
-      setMensaje('Credenciales incorrectas. Revisá tu email y contraseña.')
+      if (!querySnapshot.empty) {
+        const usuario = querySnapshot.docs[0].data()
+        localStorage.setItem('usuarioActual', JSON.stringify(usuario))
+        setMensaje('¡Inicio de sesión exitoso!')
+        setError(false)
+        onLogin(usuario)
+      } else {
+        setMensaje('Credenciales incorrectas. Revisá tu email y contraseña.')
+        setError(true)
+      }
+    } catch (error) {
+      setMensaje('Error al conectar con la base de datos.')
       setError(true)
     }
   }
@@ -52,9 +57,7 @@ function LoginForm({ onLogin }) {
       <button type="submit">Ingresar</button>
 
       {mensaje && (
-        <p className={error ? 'mensaje-error' : 'mensaje-exito'}>
-          {mensaje}
-        </p>
+        <Alerta tipo={error ? 'error' : 'exito'} mensaje={mensaje} onClose={() => setMensaje('')} />
       )}
     </form>
   )

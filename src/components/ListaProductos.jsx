@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '../firebase'
 
 function ListaProductos() {
   const [productos, setProductos] = useState([])
@@ -11,15 +13,21 @@ function ListaProductos() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const guardados = JSON.parse(localStorage.getItem('productos')) || []
-    setProductos(guardados)
+    const cargarProductos = async () => {
+      const snapshot = await getDocs(collection(db, 'productos'))
+      const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setProductos(prods)
 
-    const categorias = [...new Set(guardados.map(p => p.categoria))]
-    setCategoriasUnicas(categorias)
+      // Extraemos categorías únicas
+      const categorias = [...new Set(prods.map(p => p.categoria))]
+      setCategoriasUnicas(categorias)
 
-    const todasCaracteristicas = guardados.flatMap(p => p.caracteristicas)
-    const caracteristicas = [...new Set(todasCaracteristicas)]
-    setCaracteristicasUnicas(caracteristicas)
+      // Extraemos características únicas
+      const todasCaracteristicas = prods.flatMap(p => p.caracteristicas)
+      const caracteristicas = [...new Set(todasCaracteristicas)]
+      setCaracteristicasUnicas(caracteristicas)
+    }
+    cargarProductos()
   }, [])
 
   const handleCategoriaChange = (e) => {
@@ -86,8 +94,8 @@ function ListaProductos() {
         ) : (
           productosFiltrados.map((p, i) => (
             <div
-              key={i}
-              onClick={() => navigate(`/productos/${i}`)}
+              key={p.id}
+              onClick={() => navigate(`/productos/${p.id}`)}
               style={{
                 width: '280px',
                 backgroundColor: '#2a2a2a',
