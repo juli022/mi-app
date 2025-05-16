@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { db } from '../firebase'
+import { collection, addDoc, getDocs } from 'firebase/firestore'
 
 function CategoryAdmin() {
   const [categorias, setCategorias] = useState([])
@@ -9,8 +11,12 @@ function CategoryAdmin() {
   })
 
   useEffect(() => {
-    const datos = JSON.parse(localStorage.getItem('categorias')) || []
-    setCategorias(datos)
+    const cargarCategorias = async () => {
+      const snapshot = await getDocs(collection(db, 'categorias'))
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setCategorias(docs)
+    }
+    cargarCategorias()
   }, [])
 
   const handleChange = (e) => {
@@ -20,17 +26,21 @@ function CategoryAdmin() {
     })
   }
 
-  const agregarCategoria = (e) => {
+  const agregarCategoria = async (e) => {
     e.preventDefault()
+
     if (
       !nuevaCategoria.titulo.trim() ||
       !nuevaCategoria.descripcion.trim() ||
       !nuevaCategoria.imagen.trim()
-    ) return alert('Completá todos los campos.')
+    ) {
+      alert('Completá todos los campos.')
+      return
+    }
 
-    const actualizadas = [...categorias, nuevaCategoria]
-    setCategorias(actualizadas)
-    localStorage.setItem('categorias', JSON.stringify(actualizadas))
+    await addDoc(collection(db, 'categorias'), nuevaCategoria)
+
+    setCategorias([...categorias, nuevaCategoria])
     setNuevaCategoria({ titulo: '', descripcion: '', imagen: '' })
   }
 
