@@ -55,7 +55,7 @@ function ListaProductos() {
       <div style={{ marginBottom: '1.5rem' }}>
         <label>
           Filtrar por categoría:{' '}
-          <select value={filtroCategoria} onChange={handleCategoriaChange} style={{ padding: '0.3rem', borderRadius: '6px' }}>
+          <select value={filtroCategoria} onChange={handleCategoriaChange}>
             <option value="">Todas</option>
             {categoriasUnicas.map((cat, i) => (
               <option key={i} value={cat}>{cat}</option>
@@ -66,7 +66,7 @@ function ListaProductos() {
         <div style={{ marginTop: '0.5rem' }}>
           <span>Filtrar por características:</span>
           {caracteristicasUnicas.map((car, i) => (
-            <label key={i} style={{ marginLeft: '1rem', cursor: 'pointer', userSelect: 'none' }}>
+            <label key={i} style={{ marginLeft: '1rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 value={car}
@@ -89,38 +89,43 @@ function ListaProductos() {
               key={i}
               onClick={() => navigate(`/productos/${i}`)}
               style={{
-                width: '300px',
+                width: '280px',
                 backgroundColor: '#2a2a2a',
                 borderRadius: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                 overflow: 'hidden',
-                boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
                 display: 'flex',
                 flexDirection: 'column',
                 cursor: 'pointer',
                 transition: 'transform 0.3s ease, box-shadow 0.3s ease',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-5px)'
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.5)'
+                e.currentTarget.style.transform = 'translateY(-6px)'
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.6)'
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.3)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)'
               }}
             >
               {p.imagen && (
                 <img
                   src={p.imagen}
                   alt={p.titulo}
-                  style={{ width: '100%', height: '180px', objectFit: 'cover' }}
+                  style={{
+                    width: '100%',
+                    height: '180px',
+                    objectFit: 'cover',
+                    borderBottom: '1px solid #444',
+                  }}
                 />
               )}
               <div style={{ padding: '1rem', flexGrow: 1 }}>
-                <h3 style={{ marginBottom: '0.5rem' }}>{p.titulo}</h3>
-                <p style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: '0.5rem' }}>
+                <h3 style={{ marginBottom: '0.4rem', fontSize: '1.2rem' }}>{p.titulo}</h3>
+                <p style={{ fontSize: '0.9rem', color: '#bbb', marginBottom: '0.6rem' }}>
                   Categoría: <strong>{p.categoria}</strong>
                 </p>
-                <ul style={{ paddingLeft: '1rem', fontSize: '0.9rem', marginBottom: 0 }}>
+                <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem', margin: 0, color: '#ddd' }}>
                   {p.caracteristicas.map((car, j) => (
                     <li key={j}>{car}</li>
                   ))}

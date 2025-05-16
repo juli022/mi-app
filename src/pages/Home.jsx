@@ -11,9 +11,25 @@ function Home() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const raw = localStorage.getItem('usuarioActual')
-    const user = raw && raw !== "undefined" ? JSON.parse(raw) : null
-    setUsuario(user)
+    let usuariosGuardados = JSON.parse(localStorage.getItem('usuarios')) || []
+
+    if (usuariosGuardados.length === 0) {
+      const adminDefault = {
+        nombre: 'Admin',
+        apellido: 'Default',
+        email: 'admin@admin.com',
+        password: 'admin123',
+        rol: 'admin'
+      }
+      usuariosGuardados = [adminDefault]
+      localStorage.setItem('usuarios', JSON.stringify(usuariosGuardados))
+      localStorage.setItem('usuarioActual', JSON.stringify(adminDefault))
+      setUsuario(adminDefault)
+    } else {
+      const rawUser = localStorage.getItem('usuarioActual')
+      const user = rawUser && rawUser !== "undefined" ? JSON.parse(rawUser) : null
+      setUsuario(user)
+    }
   }, [])
 
   const handleLogout = () => {

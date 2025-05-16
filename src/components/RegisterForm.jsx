@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Alerta from './Alerta'
 
 function RegisterForm() {
   const [nombre, setNombre] = useState('')
@@ -6,15 +7,24 @@ function RegisterForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mensaje, setMensaje] = useState('')
+  const [error, setError] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setMensaje('')
+
+    if (!nombre || !apellido || !email || !password) {
+      setMensaje('Completá todos los campos.')
+      setError(true)
+      return
+    }
 
     const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
-
     const yaExiste = usuarios.some((u) => u.email === email)
+
     if (yaExiste) {
       setMensaje('Este email ya está registrado.')
+      setError(true)
       return
     }
 
@@ -30,7 +40,8 @@ function RegisterForm() {
     localStorage.setItem('usuarios', JSON.stringify(usuarios))
     localStorage.setItem('usuarioActual', JSON.stringify(nuevoUsuario))
     setMensaje('¡Registro exitoso! Ahora estás logueada como usuaria.')
-    
+    setError(false)
+
     // Limpiar campos
     setNombre('')
     setApellido('')
@@ -48,6 +59,15 @@ function RegisterForm() {
       boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
     }}>
       <h2 style={{ textAlign: 'center' }}>Formulario de Registro</h2>
+
+      {mensaje && (
+        <Alerta
+          tipo={error ? 'error' : 'exito'}
+          mensaje={mensaje}
+          onClose={() => setMensaje('')}
+        />
+      )}
+
       <form onSubmit={handleSubmit}>
         <label>Nombre</label>
         <input
@@ -85,18 +105,6 @@ function RegisterForm() {
           Registrarse
         </button>
       </form>
-
-      {mensaje && (
-        <p
-          style={{
-            marginTop: '1rem',
-            color: mensaje.includes('exitoso') ? 'var(--color-success)' : 'var(--color-danger)',
-            textAlign: 'center'
-          }}
-        >
-          {mensaje}
-        </p>
-      )}
     </div>
   )
 }

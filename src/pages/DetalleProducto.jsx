@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import Alerta from '../components/Alerta'
 
 function DetalleProducto() {
   const { id } = useParams()
@@ -8,6 +9,7 @@ function DetalleProducto() {
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [mensaje, setMensaje] = useState('')
+  const [error, setError] = useState(false)
   const [usuario, setUsuario] = useState(null)
 
   useEffect(() => {
@@ -25,34 +27,36 @@ function DetalleProducto() {
 
   const handleReserva = (e) => {
     e.preventDefault()
+    setMensaje('')
+    setError(false)
 
     if (!usuario) {
       setMensaje('Tenés que iniciar sesión para reservar.')
+      setError(true)
       return
     }
 
     if (!fechaInicio || !fechaFin) {
       setMensaje('Por favor seleccioná fecha de inicio y fin.')
+      setError(true)
       return
     }
 
     if (fechaFin < fechaInicio) {
       setMensaje('La fecha de fin no puede ser anterior a la de inicio.')
+      setError(true)
       return
     }
 
     const reservas = JSON.parse(localStorage.getItem('reservas')) || []
-
     const conflicto = reservas.some(r =>
       r.productoId === id &&
-      !(
-        fechaFin < r.fechaInicio ||
-        fechaInicio > r.fechaFin
-      )
+      !(fechaFin < r.fechaInicio || fechaInicio > r.fechaFin)
     )
 
     if (conflicto) {
       setMensaje('Este producto ya está reservado en las fechas seleccionadas.')
+      setError(true)
       return
     }
 
@@ -68,7 +72,7 @@ function DetalleProducto() {
     reservas.push(nuevaReserva)
     localStorage.setItem('reservas', JSON.stringify(reservas))
     setMensaje('¡Reserva realizada con éxito!')
-
+    setError(false)
     setFechaInicio('')
     setFechaFin('')
   }
@@ -101,7 +105,7 @@ function DetalleProducto() {
         />
       )}
 
-      <div style={{ maxWidth: '600px' }}>
+      <div style={{ maxWidth: '600px', width: '100%' }}>
         <p><strong>Categoría:</strong> {producto.categoria}</p>
         <p><strong>Características:</strong></p>
         <ul style={{ paddingLeft: '1.5rem', marginBottom: '2rem' }}>
@@ -111,6 +115,15 @@ function DetalleProducto() {
         </ul>
 
         <h3>Reservar este producto</h3>
+
+        {mensaje && (
+          <Alerta
+            tipo={error ? 'error' : 'exito'}
+            mensaje={mensaje}
+            onClose={() => setMensaje('')}
+          />
+        )}
+
         <form
           onSubmit={handleReserva}
           style={{
@@ -142,16 +155,6 @@ function DetalleProducto() {
           </label>
           <button type="submit">Reservar</button>
         </form>
-
-        {mensaje && (
-          <p style={{
-            marginTop: '1rem',
-            color: mensaje.includes('éxito') ? 'var(--color-success)' : 'var(--color-danger)',
-            fontWeight: '500'
-          }}>
-            {mensaje}
-          </p>
-        )}
 
         <button
           onClick={() => navigate('/productos')}

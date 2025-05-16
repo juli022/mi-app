@@ -17,7 +17,11 @@ function LoginForm({ onLogin }) {
     }
 
     const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
-    const usuario = usuarios.find(u => u.email === email && u.password === password)
+
+    // Buscar usuario ignorando mayúsculas y espacios en email
+    const usuario = usuarios.find(
+      u => u.email.trim().toLowerCase() === email.trim().toLowerCase() && u.password === password
+    )
 
     if (usuario) {
       localStorage.setItem('usuarioActual', JSON.stringify(usuario))

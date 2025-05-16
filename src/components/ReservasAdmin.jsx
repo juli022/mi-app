@@ -4,6 +4,14 @@ function ReservasAdmin() {
   const [reservas, setReservas] = useState([])
   const [productos, setProductos] = useState([])
   const [usuarios, setUsuarios] = useState([])
+  
+  // Filtros
+  const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroUsuario, setFiltroUsuario] = useState('')
+
+  // Mensaje de feedback
+  const [mensaje, setMensaje] = useState('')
+  const [tipoMensaje, setTipoMensaje] = useState('') // 'exito' o 'error'
 
   useEffect(() => {
     const reservasGuardadas = JSON.parse(localStorage.getItem('reservas')) || []
@@ -15,21 +23,31 @@ function ReservasAdmin() {
     setUsuarios(usuariosGuardados)
   }, [])
 
+  // Función para mostrar mensaje con autocierre
+  const mostrarMensaje = (msg, tipo = 'exito') => {
+    setMensaje(msg)
+    setTipoMensaje(tipo)
+    setTimeout(() => {
+      setMensaje('')
+    }, 3000)
+  }
+
   const cambiarEstado = (id, nuevoEstado) => {
     const actualizadas = reservas.map(r =>
       r.id === id ? { ...r, estado: nuevoEstado } : r
     )
     setReservas(actualizadas)
     localStorage.setItem('reservas', JSON.stringify(actualizadas))
+    mostrarMensaje(`Reserva ${nuevoEstado} con éxito!`)
   }
 
   const eliminarReserva = (id) => {
     const filtradas = reservas.filter(r => r.id !== id)
     setReservas(filtradas)
     localStorage.setItem('reservas', JSON.stringify(filtradas))
+    mostrarMensaje('Reserva eliminada con éxito!')
   }
 
-  // Funciones para mostrar nombre producto y usuario
   const nombreProducto = (productoId) => {
     const p = productos[productoId]
     return p ? p.titulo : 'Producto eliminado'
@@ -40,12 +58,61 @@ function ReservasAdmin() {
     return u ? `${u.nombre} ${u.apellido}` : 'Usuario eliminado'
   }
 
+  // Aplicamos filtros
+  const reservasFiltradas = reservas.filter(r => {
+    const cumpleEstado = filtroEstado ? r.estado === filtroEstado : true
+    const cumpleUsuario = filtroUsuario
+      ? nombreUsuario(r.usuarioEmail).toLowerCase().includes(filtroUsuario.toLowerCase())
+      : true
+    return cumpleEstado && cumpleUsuario
+  })
+
   return (
     <div style={{ padding: '2rem', color: 'white', minHeight: '100vh', backgroundColor: '#1e1e1e' }}>
       <h2>Gestión de Reservas</h2>
 
-      {reservas.length === 0 ? (
-        <p>No hay reservas cargadas.</p>
+      {/* FILTROS */}
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <select
+          value={filtroEstado}
+          onChange={e => setFiltroEstado(e.target.value)}
+          style={{ padding: '0.5rem', borderRadius: '5px', border: '1px solid #444', background: '#2a2a2a', color: 'white' }}
+        >
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="confirmada">Confirmada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+
+        <input
+          type="text"
+          placeholder="Buscar por usuario..."
+          value={filtroUsuario}
+          onChange={e => setFiltroUsuario(e.target.value)}
+          style={{ padding: '0.5rem', borderRadius: '5px', border: '1px solid #444', background: '#2a2a2a', color: 'white', flexGrow: 1 }}
+        />
+      </div>
+
+      {/* MENSAJE */}
+      {mensaje && (
+        <div
+          style={{
+            marginBottom: '1rem',
+            padding: '0.75rem 1rem',
+            borderRadius: '5px',
+            backgroundColor: tipoMensaje === 'exito' ? '#38b000' : '#e63946',
+            color: 'white',
+            fontWeight: 'bold',
+            maxWidth: '400px'
+          }}
+        >
+          {mensaje}
+        </div>
+      )}
+
+      {/* TABLA */}
+      {reservasFiltradas.length === 0 ? (
+        <p>No hay reservas cargadas o que coincidan con los filtros.</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', color: 'white' }}>
           <thead>
@@ -59,13 +126,13 @@ function ReservasAdmin() {
             </tr>
           </thead>
           <tbody>
-            {reservas.map(r => (
+            {reservasFiltradas.map(r => (
               <tr key={r.id} style={{ borderBottom: '1px solid #555' }}>
                 <td>{nombreProducto(r.productoId)}</td>
                 <td>{nombreUsuario(r.usuarioEmail)}</td>
                 <td>{r.fechaInicio}</td>
                 <td>{r.fechaFin}</td>
-                <td>{r.estado}</td>
+                <td style={{ textTransform: 'capitalize' }}>{r.estado}</td>
                 <td>
                   {r.estado !== 'confirmada' && (
                     <button onClick={() => cambiarEstado(r.id, 'confirmada')} style={{ marginRight: '0.5rem' }}>
