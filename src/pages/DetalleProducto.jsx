@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore'
-import { db } from '../firebase'  // asegurate que esté bien la ruta
+import { db } from '../firebase'
+import { doc, getDoc, collection, addDoc } from 'firebase/firestore'
 import Alerta from '../components/Alerta'
 
 function DetalleProducto() {
@@ -15,13 +15,21 @@ function DetalleProducto() {
   const [usuario, setUsuario] = useState(null)
 
   useEffect(() => {
-    const productos = JSON.parse(localStorage.getItem('productos')) || []
-    const prod = productos[id]
-    if (prod) {
-      setProducto(prod)
-    } else {
-      navigate('/productos')
+    const fetchProducto = async () => {
+      try {
+        const docRef = doc(db, 'productos', id)
+        const docSnap = await getDoc(docRef)
+        if (docSnap.exists()) {
+          setProducto(docSnap.data())
+        } else {
+          navigate('/productos')
+        }
+      } catch (err) {
+        console.error('Error al obtener el producto:', err)
+      }
     }
+
+    fetchProducto()
 
     const rawUser = localStorage.getItem('usuarioActual')
     if (rawUser) setUsuario(JSON.parse(rawUser))
@@ -37,11 +45,13 @@ function DetalleProducto() {
       setError(true)
       return
     }
+
     if (!fechaInicio || !fechaFin) {
       setMensaje('Por favor seleccioná fecha de inicio y fin.')
       setError(true)
       return
     }
+
     if (fechaFin < fechaInicio) {
       setMensaje('La fecha de fin no puede ser anterior a la de inicio.')
       setError(true)
@@ -49,41 +59,25 @@ function DetalleProducto() {
     }
 
     try {
-      // Query reservas en Firestore que tengan mismo producto y fechas conflictivas
-      const reservasRef = collection(db, 'reservas')
-      const q = query(reservasRef, where('productoId', '==', id))
-      const querySnapshot = await getDocs(q)
-
-      const conflicto = querySnapshot.docs.some(doc => {
-        const r = doc.data()
-        return !(fechaFin < r.fechaInicio || fechaInicio > r.fechaFin)
-      })
-
-      if (conflicto) {
-        setMensaje('Este producto ya está reservado en las fechas seleccionadas.')
-        setError(true)
-        return
-      }
-
-      // Agregar reserva a Firestore
-      await addDoc(reservasRef, {
+      const nuevaReserva = {
         productoId: id,
         usuarioEmail: usuario.email,
         fechaInicio,
         fechaFin,
         estado: 'pendiente',
-        creadoEn: new Date()
-      })
+        createdAt: new Date()
+      }
+
+      await addDoc(collection(db, 'reservas'), nuevaReserva)
 
       setMensaje('¡Reserva realizada con éxito!')
       setError(false)
       setFechaInicio('')
       setFechaFin('')
-
-    } catch (err) {
-      setMensaje('Error al guardar la reserva. Intentá de nuevo.')
+    } catch (error) {
+      console.error('Error al guardar la reserva:', error)
+      setMensaje('Error al realizar la reserva. Intentá de nuevo más tarde.')
       setError(true)
-      console.error(err)
     }
   }
 
@@ -119,7 +113,7 @@ function DetalleProducto() {
         <p><strong>Categoría:</strong> {producto.categoria}</p>
         <p><strong>Características:</strong></p>
         <ul style={{ paddingLeft: '1.5rem', marginBottom: '2rem' }}>
-          {producto.caracteristicas.map((car, i) => (
+          {producto.caracteristicas?.map((car, i) => (
             <li key={i}>{car}</li>
           ))}
         </ul>

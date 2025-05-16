@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useNavigate } from 'react-router-dom'
 
 function ListaProductos() {
   const [productos, setProductos] = useState([])
@@ -13,53 +13,48 @@ function ListaProductos() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const cargarProductos = async () => {
-      const snapshot = await getDocs(collection(db, 'productos'))
-      const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      setProductos(prods)
+    const fetchProductos = async () => {
+      const querySnapshot = await getDocs(collection(db, 'productos'))
+      const lista = querySnapshot.docs.map(doc => ({
+        id: doc.id, // 🔥 importante para el navigate
+        ...doc.data()
+      }))
+      setProductos(lista)
 
-      // Extraemos categorías únicas
-      const categorias = [...new Set(prods.map(p => p.categoria))]
+      const categorias = [...new Set(lista.map(p => p.categoria))]
       setCategoriasUnicas(categorias)
 
-      // Extraemos características únicas
-      const todasCaracteristicas = prods.flatMap(p => p.caracteristicas)
+      const todasCaracteristicas = lista.flatMap(p => p.caracteristicas)
       const caracteristicas = [...new Set(todasCaracteristicas)]
       setCaracteristicasUnicas(caracteristicas)
     }
-    cargarProductos()
+
+    fetchProductos()
   }, [])
 
-  const handleCategoriaChange = (e) => {
-    setFiltroCategoria(e.target.value)
-  }
+  const handleCategoriaChange = (e) => setFiltroCategoria(e.target.value)
 
   const handleCaracteristicaChange = (e) => {
     const valor = e.target.value
-    if (filtroCaracteristicas.includes(valor)) {
-      setFiltroCaracteristicas(filtroCaracteristicas.filter(c => c !== valor))
-    } else {
-      setFiltroCaracteristicas([...filtroCaracteristicas, valor])
-    }
+    setFiltroCaracteristicas(prev =>
+      prev.includes(valor)
+        ? prev.filter(c => c !== valor)
+        : [...prev, valor]
+    )
   }
 
-  const productosFiltrados = productos.filter(producto => {
-    if (filtroCategoria && producto.categoria !== filtroCategoria) return false
+  const productosFiltrados = productos.filter(p => {
+    if (filtroCategoria && p.categoria !== filtroCategoria) return false
     if (filtroCaracteristicas.length > 0) {
-      return filtroCaracteristicas.every(fc => producto.caracteristicas.includes(fc))
+      return filtroCaracteristicas.every(fc => p.caracteristicas.includes(fc))
     }
     return true
   })
-
-  if (productos.length === 0) {
-    return <p style={{ color: 'white' }}>No hay productos cargados aún.</p>
-  }
 
   return (
     <div style={{ marginTop: '2rem', color: 'white' }}>
       <h2>Productos Disponibles</h2>
 
-      {/* FILTROS */}
       <div style={{ marginBottom: '1.5rem' }}>
         <label>
           Filtrar por categoría:{' '}
@@ -80,22 +75,20 @@ function ListaProductos() {
                 value={car}
                 checked={filtroCaracteristicas.includes(car)}
                 onChange={handleCaracteristicaChange}
-              />
-              {' '}{car}
+              />{' '}{car}
             </label>
           ))}
         </div>
       </div>
 
-      {/* LISTADO */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
         {productosFiltrados.length === 0 ? (
           <p>No hay productos que coincidan con los filtros.</p>
         ) : (
-          productosFiltrados.map((p, i) => (
+          productosFiltrados.map((p) => (
             <div
               key={p.id}
-              onClick={() => navigate(`/productos/${p.id}`)}
+              onClick={() => navigate(`/productos/${p.id}`)} // 👈 usando el ID real
               style={{
                 width: '280px',
                 backgroundColor: '#2a2a2a',
@@ -124,13 +117,13 @@ function ListaProductos() {
                     width: '100%',
                     height: '180px',
                     objectFit: 'cover',
-                    borderBottom: '1px solid #444',
+                    borderBottom: '1px solid #444'
                   }}
                 />
               )}
-              <div style={{ padding: '1rem', flexGrow: 1 }}>
-                <h3 style={{ marginBottom: '0.4rem', fontSize: '1.2rem' }}>{p.titulo}</h3>
-                <p style={{ fontSize: '0.9rem', color: '#bbb', marginBottom: '0.6rem' }}>
+              <div style={{ padding: '1rem' }}>
+                <h3 style={{ marginBottom: '0.4rem' }}>{p.titulo}</h3>
+                <p style={{ fontSize: '0.9rem', color: '#bbb' }}>
                   Categoría: <strong>{p.categoria}</strong>
                 </p>
                 <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem', margin: 0, color: '#ddd' }}>
