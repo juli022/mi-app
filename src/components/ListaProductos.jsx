@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 function ListaProductos() {
   const [productos, setProductos] = useState([])
@@ -10,13 +11,11 @@ function ListaProductos() {
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroCaracteristicas, setFiltroCaracteristicas] = useState([])
 
-  const navigate = useNavigate()
-
   useEffect(() => {
     const fetchProductos = async () => {
       const querySnapshot = await getDocs(collection(db, 'productos'))
       const lista = querySnapshot.docs.map(doc => ({
-        id: doc.id, // 🔥 importante para el navigate
+        id: doc.id,
         ...doc.data()
       }))
       setProductos(lista)
@@ -86,10 +85,12 @@ function ListaProductos() {
           <p>No hay productos que coincidan con los filtros.</p>
         ) : (
           productosFiltrados.map((p) => (
-            <div
+            <Link
+              to={`/productos/${p.id}`}
               key={p.id}
-              onClick={() => navigate(`/productos/${p.id}`)} // 👈 usando el ID real
               style={{
+                textDecoration: 'none',
+                color: 'inherit',
                 width: '280px',
                 backgroundColor: '#2a2a2a',
                 borderRadius: '12px',
@@ -132,7 +133,7 @@ function ListaProductos() {
                   ))}
                 </ul>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>
