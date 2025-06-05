@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '../firebase'
 
 function MisReservas() {
@@ -7,6 +7,7 @@ function MisReservas() {
   const [productos, setProductos] = useState([])
   const [usuario, setUsuario] = useState(null)
 
+  // Obtener usuario
   useEffect(() => {
     const rawUser = localStorage.getItem('usuarioActual')
     if (rawUser) {
@@ -14,27 +15,27 @@ function MisReservas() {
     }
   }, [])
 
+  // Traer reservas y productos desde Firestore
   useEffect(() => {
-    const fetchReservas = async () => {
-      const snapshot = await getDocs(collection(db, 'reservas'))
-      setReservas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    const fetchDatos = async () => {
+      const reservasSnap = await getDocs(collection(db, 'reservas'))
+      const productosSnap = await getDocs(collection(db, 'productos'))
+
+      setReservas(reservasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      setProductos(productosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
     }
-    fetchReservas()
+
+    fetchDatos()
   }, [])
 
-  useEffect(() => {
-    const fetchProductos = async () => {
-      const snapshot = await getDocs(collection(db, 'productos'))
-      setProductos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-    }
-    fetchProductos()
-  }, [])
-
+  // Cancelar reserva (eliminar de Firestore)
   const cancelarReserva = async (id) => {
-    const nuevasReservas = reservas.filter(r => r.id !== id)
-    setReservas(nuevasReservas)
-    // Nota: acá deberías implementar eliminación en Firestore si querés que sea persistente
-    // Por ahora, para mantener simple, solo actualizamos estado local
+    try {
+      await deleteDoc(doc(db, 'reservas', id))
+      setReservas(reservas.filter(r => r.id !== id))
+    } catch (error) {
+      alert('❌ Error al cancelar la reserva.')
+    }
   }
 
   if (!usuario) {
